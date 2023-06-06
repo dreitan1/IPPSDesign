@@ -7,7 +7,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 import random
-from ResNet import ResNet
+from resnet import ResNet
 
 
 def load_files(path):
