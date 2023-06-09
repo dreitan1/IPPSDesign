@@ -77,6 +77,10 @@ optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=1e-6)
 forward_model = FWBinaryImageCNN().to(device)
 forward_path = path + "/models/forward_model.pth"
 forward_model.load_state_dict(torch.load(forward_path, map_location=device))
+# Set forward_model to train only
+for param in forward_model.parameters():
+    param.requires_grad = False
+forward_model.eval()
 
 for epoch in range(epochs):
     for i, (chs, ins) in enumerate(loader):

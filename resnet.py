@@ -1,6 +1,7 @@
 import torch
 from torch import nn as nn
 
+
 class ResBlock(nn.Module):
   def __init__(self, in_channels, out_channels):
         super(ResBlock, self).__init__()
@@ -19,6 +20,7 @@ class ResBlock(nn.Module):
       x += res
       x = nn.Sigmoid()(x)
       return x
+
 
 class ResNet(nn.Module):
     def __init__(self, layers=[2, 2, 2], input_dim=100*2, output_dims=[1, 20, 20]):
