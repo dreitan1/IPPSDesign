@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 import os
 import random
 from resnet import ResNet
+from forward import FWBinaryImageCNN
 
 
 def load_files(path):
@@ -32,8 +33,6 @@ def load_files(path):
         Chars1[counts, :, :] = torch.tensor(Character_)[:, :]
         Chars[counts, :, 0] = Chars1[counts, :, 1]
         Chars[counts, :, 1] = Chars1[counts, :, 2]
-        #  over 100 wavelength (row), each column presents the contribution from each channel
-        #Chars[counts, :, 2] = 1 - Chars[counts, :, 0] - Chars[counts, :,1]
 
     return inputs, Chars
 
@@ -46,19 +45,26 @@ def BernoulliLoss(outputs: torch.Tensor, labels: torch.Tensor(), ep=1e-6) -> tor
     return BLoss
 
 
+# Bernoulli loss + loss between difference in outputs from forward model in label and input
+def BernoulliForwardLoss(outputs: torch.Tensor, labels: torch.Tensor(), forward_model, ep=1e-6) -> torch.Tensor:
+    BLoss = (-1 * (torch.mul(labels, torch.log(outputs + ep)) + torch.mul((1 - labels), torch.log(1 - outputs + ep)))).mean()
+    forward_loss = torch.abs((forward_model(outputs) - forward_model(labels))).mean()
+    return BLoss + forward_loss
+
+
 # Setup variables
-path = "."
+path = ".."
 
 # wavelengths: (100x2)
 # inputs: (1x20x20)
-inputs, chars = load_files("./Machine learning inverse design")
+inputs, chars = load_files(path + "/Machine learning inverse design")
 
 # lr of 0.01 seems to work the best, in terms of single-pixel convergence
 lr = 0.001
 batch_size = 64
 epochs = 10000
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-criterion = BernoulliLoss
+criterion = BernoulliForwardLoss
 
 dataset = TensorDataset(chars, inputs)
 loader = DataLoader(dataset, batch_size=batch_size, drop_last=True)
@@ -68,12 +74,17 @@ model = ResNet().to(device)
 model_path = path + "/models/model.pth"
 optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=1e-6)
 
+forward_model = FWBinaryImageCNN().to(device)
+forward_path = path + "/models/forward_model.pth"
+forward_model.load_state_dict(torch.load(forward_path, map_location=device))
+
 for epoch in range(epochs):
     for i, (chs, ins) in enumerate(loader):
         chs = chs.to(device)
         ins = ins.to(device)
         optimizer.zero_grad()
-        loss = criterion(model(chs), ins)
+        #loss = criterion(model(chs), ins)
+        loss = criterion(model(chs), ins, forward_model)
         loss.backward()
         optimizer.step()
     if epoch % 100 == 0:
