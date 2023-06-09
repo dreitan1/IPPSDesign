@@ -5,6 +5,7 @@ from torch import nn as nn
 class ResBlock(nn.Module):
   def __init__(self, in_channels, out_channels):
         super(ResBlock, self).__init__()
+
         self.linear = nn.Sequential(
             nn.Linear(in_channels, out_channels),
             nn.BatchNorm1d(out_channels),
@@ -23,13 +24,15 @@ class ResBlock(nn.Module):
 
 
 class ResNet(nn.Module):
-    def __init__(self, layers=[2, 2, 2], input_dim=100*2, output_dims=[1, 20, 20]):
+    def __init__(self, layers=[2, 2, 2], input_dim=100*2, output_dims=(1, 20, 20)):
         super(ResNet, self).__init__()
 
         self.input_dim = input_dim
         self.output_dims = output_dims
         int_dim = 100
         output_dim = int(torch.prod(torch.Tensor(output_dims), 0).item())
+
+        self.bias = nn.Parameter(torch.ones(output_dims))
 
         self.net = nn.Sequential(
             nn.Linear(input_dim, int_dim),
@@ -56,4 +59,4 @@ class ResNet(nn.Module):
         x = x.view(x.size(0), -1)
         x = self.fc(x)
         x = x.view(-1, self.output_dims[0], self.output_dims[1], self.output_dims[2])
-        return nn.Sigmoid()(x)
+        return nn.Sigmoid()(x+self.bias)

@@ -1,13 +1,10 @@
 import torch
 from torch import nn as nn
-from torch.nn import functional as F
 from torch.utils.data import TensorDataset, DataLoader
-from torch.optim.lr_scheduler import CyclicLR, ReduceLROnPlateau
 import numpy as np
-import matplotlib.pyplot as plt
 import os
-import random
 from resnet import ResNet
+from inceptionnet import InceptionNet
 from forward import FWBinaryImageCNN
 
 
@@ -62,7 +59,7 @@ inputs, chars = load_files(path + "/Machine learning inverse design")
 # lr of 0.01 seems to work the best, in terms of single-pixel convergence
 lr = 0.001
 batch_size = 64
-epochs = 10000
+epochs = 15000
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 criterion = BernoulliForwardLoss
 

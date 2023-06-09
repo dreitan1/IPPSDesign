@@ -1,8 +1,11 @@
 import torch
+from torch.utils.data import TensorDataset, DataLoader
 import numpy as np
 import matplotlib.pyplot as plt
 from resnet import ResNet
+from inceptionnet import InceptionNet
 from forward import FWBinaryImageCNN
+import os
 
 
 # Load in dataset images and characteristics
@@ -40,14 +43,16 @@ path = ".."
 inputs, chars = load_files(path + "/Machine learning inverse design")
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-model = ResNet().to(device)
+#model = ResNet().to(device)
+model = InceptionNet().to(device)
 forward_model = FWBinaryImageCNN().to(device)
 
 batch_size = 1
 dataset = TensorDataset(chars, inputs)
 loader = DataLoader(dataset, batch_size=batch_size, drop_last=True)
 
-model_path = path + "/models/model.pth"
+#model_path = path + "/models/model.pth"
+model_path = path + "/models/inception_model.pth"
 model.load_state_dict(torch.load(model_path, map_location=device))
 model.eval()
 
@@ -65,10 +70,12 @@ accuracy = 0
 # pixel_value = {0, 1}
 divide = 0.5
 
-full_test = True
+full_test = False
 # Reference number pps to show and save
-ref_num = 1
-save = False
+ref_num = 2
+save = True
+
+os.makedirs(path + "/figures", exist_ok=True)
 
 with torch.no_grad():
   im = np.zeros((30, 30))
@@ -103,17 +110,20 @@ with torch.no_grad():
   fig = plt.figure()
   ax1 = fig.add_subplot(1, 2, 1)
   ax1.title.set_text('Predicted PPS')
+  ax1.set_xticklabels([])
+  ax1.set_yticklabels([])
   plt.imshow(im, cmap="Greys_r", norm=norm)
   ax2 = fig.add_subplot(1, 2, 2)
   ax2.title.set_text('Real PPS')
+  ax2.set_xticklabels([])
+  ax2.set_yticklabels([])
   plt.imshow(ref, cmap="Greys_r", norm=norm)
 
   if save:
     plt.savefig(path + '/figures/Image' + str(ref_num), bbox_inches='tight')
+    print("Saved PPS output", str(ref_num))
   plt.show()
   plt.close()
-
-print("Saved PPS output")
 
 with torch.no_grad():
   inverse_accuracy = 0
@@ -160,20 +170,26 @@ scale = 10
 
 for i in range(len(inverseT1)):
   print("Datapoint " + str(i))
-  print("T1")
+  fig1 = plt.figure()
+  ax1 = fig1.add_subplot(1, 1, 1)
+  ax1.title.set_text("T1")
+  ax1.set_xticklabels([])
   plt.plot(range(0, scale*len(inverseT1[i]), scale), inverseT1[i].cpu(), 'bo--', label='Inverse Model')
   plt.plot(range(0, scale*len(forwardT1[i]), scale), forwardT1[i].cpu(), 'go--', label='Forward Model')
   plt.plot(range(0, scale*len(realT1[i]), scale), realT1[i].cpu(), 'r+--', label='Real Data')
   plt.legend(loc="upper right")
-  plt.savefig(path + '/figures/Datapoint' + str(i) + 'T1')
+  plt.savefig(path + '/figures/Datapoint' + str(i) + "T1")
   plt.show()
   plt.close()
-  print("T2")
+  fig2 = plt.figure()
+  ax2 = fig2.add_subplot(1, 1, 1)
+  ax2.title.set_text("T2")
+  ax2.set_xticklabels([])
   plt.plot(range(0, scale*len(inverseT2[i]), scale), inverseT2[i].cpu(), 'bo--', label='Inverse Model')
   plt.plot(range(0, scale*len(forwardT2[i]), scale), forwardT2[i].cpu(), 'go--', label='Forward Model')
   plt.plot(range(0, scale*len(realT2[i]), scale), realT2[i].cpu(), 'r+--', label='Real Data')
   plt.legend(loc="upper right")
-  plt.savefig(path + '/figures/Datapoint' + str(i) + 'T2')
+  plt.savefig(path + '/figures/Datapoint' + str(i) + "T2")
   plt.show()
   plt.close()
 

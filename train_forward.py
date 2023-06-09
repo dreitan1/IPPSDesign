@@ -1,12 +1,8 @@
 import torch
 from torch import nn as nn
-from torch.nn import functional as F
 from torch.utils.data import TensorDataset, DataLoader
-from torch.optim.lr_scheduler import CyclicLR, ReduceLROnPlateau
 import numpy as np
-import matplotlib.pyplot as plt
 import os
-import random
 from forward import FWBinaryImageCNN
 
 
