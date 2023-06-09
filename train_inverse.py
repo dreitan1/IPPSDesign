@@ -94,6 +94,6 @@ for epoch in range(epochs):
     if epoch % 100 == 0:
       print(f"Epoch: [{epoch}/{epochs}], Loss: {loss.item():.6f}")
 
-os.mkdir(path + '/models', exist_ok=True)
+os.makedirs(path + '/models', exist_ok=True)
 torch.save(model.state_dict(), model_path)
 print("model complete")
