@@ -4,8 +4,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 from resnet import ResNet
 from inceptionnet import InceptionNet
+from vgg import VGG
 from forward import FWBinaryImageCNN
 import os
+import argparse
 
 
 # Load in dataset images and characteristics
@@ -35,6 +37,13 @@ def load_files(path):
     return inputs, Chars
 
 
+# Set up arg parser
+parser = argparse.ArgumentParser(
+                    prog='Inverse Model Trainer',
+                    description='Trains an inverse model')
+parser.add_argument('--model', required=True)
+args = parser.parse_args()
+
 # Setup test variables
 path = ".."
 
@@ -43,16 +52,22 @@ path = ".."
 inputs, chars = load_files(path + "/Machine learning inverse design")
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-#model = ResNet().to(device)
-model = InceptionNet().to(device)
+if args.model == "ResNet":
+  model = ResNet().to(device)
+  model_path = "res_model.pth"
+elif args.model == "InceptionNet":
+  model = InceptionNet().to(device)
+  model_path = "inception_model.pth"
+elif args.model == "VGG":
+   model = VGG().to(device)
+   model_path = "vgg_model.pth"
 forward_model = FWBinaryImageCNN().to(device)
 
 batch_size = 1
 dataset = TensorDataset(chars, inputs)
-loader = DataLoader(dataset, batch_size=batch_size, drop_last=True)
+loader = DataLoader(dataset, batch_size=batch_size, drop_last=True, shuffle=False)
 
-#model_path = path + "/models/model.pth"
-model_path = path + "/models/inception_model.pth"
+model_path = path + "/models/" + model_path
 model.load_state_dict(torch.load(model_path, map_location=device))
 model.eval()
 
@@ -65,6 +80,7 @@ prec = 0.1
 
 precision = 0
 accuracy = 0
+total = 0
 
 # pixel_value = ceil(output - divide)
 # pixel_value = {0, 1}
@@ -85,18 +101,22 @@ with torch.no_grad():
     ins = ins.to(device)
 
     out = model(chs)
+    
+    # Precision measures how close the output is to converging to either 0 or 1
+    precision += torch.asarray([0.0 if prec < x < (1 - prec) else 1.0 for line in out[0][0] for x in line]).mean()
+    # Accuracy measures how close the rounded pixel output is to the expected output
+    accuracy += torch.abs(torch.ceil(out - divide) - ins).mean()
+    total += 1
+
     if i == ref_num:
         im = torch.ceil(out - divide)
         ref = ins
         sample = out
         if not full_test:
           break
-    # Precision measures how close the output is to converging to either 0 or 1
-    precision += torch.asarray([0.0 if prec < x < (1 - prec) else 1.0 for line in out[0][0] for x in line]).mean()
-    # Accuracy measures how close the rounded pixel output is to the expected output
-    accuracy += torch.abs(torch.ceil(out - divide) - ins).mean()
-  precision = precision / len(loader) * 100.0
-  accuracy = 100.0 - (accuracy / len(loader) * 100.0)
+  
+  precision = precision / total * 100.0
+  accuracy = 100.0 - (accuracy / total * 100.0)
 
   print("   Accuracy = " + "{0:.2f}".format(accuracy) + "%")
   print("   Precision = " + "{0:.2f}".format(precision) + "%")

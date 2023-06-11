@@ -5,7 +5,8 @@ import numpy as np
 import os
 from resnet import ResNet
 from inceptionnet import InceptionNet
-from forward import FWBinaryImageCNN
+from vgg import VGG
+import argparse
 
 
 def load_files(path):
@@ -41,13 +42,14 @@ def BernoulliLoss(outputs: torch.Tensor, labels: torch.Tensor(), ep=1e-6) -> tor
     BLoss = (-1 * (torch.mul(labels, torch.log(outputs + ep)) + torch.mul((1 - labels), torch.log(1 - outputs + ep)))).mean()
     return BLoss
 
+# Set up arg parser
+parser = argparse.ArgumentParser(
+                    prog='Inverse Model Trainer',
+                    description='Trains an inverse model')
+parser.add_argument('--model', required=True)
+parser.add_argument('--model_name', required=False, default=None)
 
-# Bernoulli loss + loss between difference in outputs from forward model in label and input
-def BernoulliForwardLoss(outputs: torch.Tensor, labels: torch.Tensor(), forward_model, ep=1e-6) -> torch.Tensor:
-    BLoss = (-1 * (torch.mul(labels, torch.log(outputs + ep)) + torch.mul((1 - labels), torch.log(1 - outputs + ep)))).mean()
-    forward_loss = torch.abs((forward_model(outputs) - forward_model(labels))).mean()
-    return BLoss + forward_loss
-
+args = parser.parse_args()
 
 # Setup variables
 path = ".."
@@ -56,36 +58,41 @@ path = ".."
 # inputs: (1x20x20)
 inputs, chars = load_files(path + "/Machine learning inverse design")
 
-# lr of 0.01 seems to work the best, in terms of single-pixel convergence
+# lr of 0.001 seems to work the best, in terms of single-pixel convergence
 lr = 0.001
 batch_size = 64
-epochs = 15000
+epochs = 10000
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-criterion = BernoulliForwardLoss
+criterion = BernoulliLoss
 
 dataset = TensorDataset(chars, inputs)
 loader = DataLoader(dataset, batch_size=batch_size, drop_last=True)
 
-total_steps = len(loader)
-model = ResNet().to(device)
-model_path = path + "/models/model.pth"
-optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=1e-6)
+model_name = args['model_name']
 
-forward_model = FWBinaryImageCNN().to(device)
-forward_path = path + "/models/forward_model.pth"
-forward_model.load_state_dict(torch.load(forward_path, map_location=device))
-# Set forward_model to train only
-for param in forward_model.parameters():
-    param.requires_grad = False
-forward_model.eval()
+if args['model'] == "ResNet":
+    model = ResNet().to(device)
+    if model_name is None:
+        model_name = "res_model"
+elif args['model'] == "InceptionNet":
+    model = InceptionNet().to(device)
+    if model_name is None:
+        model_name = "inception_model"
+elif args['model'] == "VGG":
+    model = VGG().to(device)
+    if model_name is None:
+        model_name = "vgg_model"
+
+model_path = path + "/models/" + model_name
+optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=1e-6)
+total_steps = len(loader)
 
 for epoch in range(epochs):
     for i, (chs, ins) in enumerate(loader):
         chs = chs.to(device)
         ins = ins.to(device)
         optimizer.zero_grad()
-        #loss = criterion(model(chs), ins)
-        loss = criterion(model(chs), ins, forward_model)
+        loss = criterion(model(chs), ins)
         loss.backward()
         optimizer.step()
     if epoch % 100 == 0:

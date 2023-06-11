@@ -24,7 +24,7 @@ class ResBlock(nn.Module):
 
 
 class ResNet(nn.Module):
-    def __init__(self, layers=[2, 2, 2], input_dim=100*2, output_dims=(1, 20, 20)):
+    def __init__(self, layers=[3, 3, 3, 3], input_dim=100*2, output_dims=(1, 20, 20)):
         super(ResNet, self).__init__()
 
         self.input_dim = input_dim
@@ -42,6 +42,7 @@ class ResNet(nn.Module):
             self.make_layer(int_dim, int_dim, layers[0]),
             self.make_layer(int_dim, int_dim, layers[1]),
             self.make_layer(int_dim, int_dim, layers[2]),
+            self.make_layer(int_dim, int_dim, layers[3]),
         )
         self.fc = nn.Linear(int_dim, output_dim)
         
