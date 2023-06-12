@@ -14,7 +14,6 @@ def load_files(path):
     files = [f[9:-4] for f in os.listdir(path + "/input_patterns") if os.path.isfile(os.path.join(path + "/input_patterns", f))]
     char_files = [f[15:-4] for f in os.listdir(path + "/output_characteristics") if os.path.isfile(os.path.join(path + "/output_characteristics", f))]
     files = list(set(files) & set(char_files))
-    files = [3]
     sizes = len(files)
     w = 20
     h = 20
@@ -66,7 +65,7 @@ divide = 0.5
 full_test = False
 # Reference number pps to show and save
 ref_num = 0
-save = True
+save = False
 
 os.makedirs(path + "/figures", exist_ok=True)
 
@@ -121,18 +120,25 @@ if save:
 plt.show()
 plt.close()
 
-# inverse_accuracy = 0
-# forward_accuracy = 0
-# for i, (chs, ins) in enumerate(loader):
-#    chs = chs.to(device)
-#    ins = ins.to(device)
-#    inverse_accuracy += (forward_model(torch.ceil(adversarial_attack(chs, forward_model) - divide)) - chs).abs().mean()
-#    forward_accuracy += (forward_model(ins) - chs).abs().mean()
-# inverse_accuracy = inverse_accuracy / len(loader)
-# forward_accuracy = forward_accuracy / len(loader)
+inverse_accuracy = 0
+forward_accuracy = 0
+relative_accuracy = 0
+total = 0
+for i, (chs, ins) in enumerate(loader):
+   chs = chs.to(device)
+   ins = ins.to(device)
+   out = forward_model(torch.ceil(adversarial_attack(chs, forward_model) - divide))
+   inverse_accuracy += (out - chs).abs().mean()
+   relative_accuracy += (out - forward_model(ins)).abs().mean()
+   forward_accuracy += (forward_model(ins) - chs).abs().mean()
+   total += 1
+inverse_accuracy = inverse_accuracy / total
+relative_accuracy = relative_accuracy / total
+forward_accuracy = forward_accuracy / total
 
-# print("Inverse MAE: " + "{0:.6f}".format(inverse_accuracy))
-# print("Forward MAE: " + "{0:.6f}".format(forward_accuracy))
+print("Inverse MAE: " + "{0:.6f}".format(inverse_accuracy))
+print("Relative MAE: " + "{0:.6f}".format(relative_accuracy))
+print("Forward MAE: " + "{0:.6f}".format(forward_accuracy))
 
 inverseT1 = []
 inverseT2 = []

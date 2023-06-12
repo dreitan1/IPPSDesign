@@ -16,6 +16,7 @@ def load_files(path):
     files = [f[9:-4] for f in os.listdir(path + "/input_patterns") if os.path.isfile(os.path.join(path + "/input_patterns", f))]
     char_files = [f[15:-4] for f in os.listdir(path + "/output_characteristics") if os.path.isfile(os.path.join(path + "/output_characteristics", f))]
     files = list(set(files) & set(char_files))
+    print(files)
     sizes = len(files)
     w = 20
     h = 20
@@ -27,14 +28,17 @@ def load_files(path):
     # Loading the Character file
     Chars1 = torch.zeros([sizes, 100, 3])
     Chars = torch.zeros([sizes, 100, 2])
+    wavelengths = torch.zeros([100])
     for counts in range(Chars.size()[0]):
         Character_ = np.loadtxt(path + '/output_characteristics/characteristics' + str(files[counts]) + '.txt', dtype=float)
 
         Chars1[counts, :, :] = torch.tensor(Character_)[:, :]
         Chars[counts, :, 0] = Chars1[counts, :, 1]
         Chars[counts, :, 1] = Chars1[counts, :, 2]
+        if counts == 0:
+          wavelengths[:] = Chars1[counts, :, 0]
 
-    return inputs, Chars
+    return inputs, Chars, [float("{:.2f}".format(x.item())) for x in wavelengths*(10**8)]
 
 
 # Set up arg parser
@@ -49,7 +53,7 @@ path = ".."
 
 # wavelengths: (100x2)
 # inputs: (1x20x20)
-inputs, chars = load_files(path + "/Machine learning inverse design")
+inputs, chars, wavelengths = load_files(path + "/Machine learning inverse design")
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 if args.model == "ResNet":
@@ -82,14 +86,14 @@ precision = 0
 accuracy = 0
 total = 0
 
-# pixel_value = ceil(output - divide)
-# pixel_value = {0, 1}
+# pixel value = ceil(output - divide)
+# pixel value = {0, 1}
 divide = 0.5
 
 full_test = False
 # Reference number pps to show and save
-ref_num = 2
-save = True
+ref_num = 0
+save = False
 
 os.makedirs(path + "/figures", exist_ok=True)
 
@@ -129,12 +133,12 @@ with torch.no_grad():
 
   fig = plt.figure()
   ax1 = fig.add_subplot(1, 2, 1)
-  ax1.title.set_text('Predicted PPS')
+  ax1.title.set_text(args.model)
   ax1.set_xticklabels([])
   ax1.set_yticklabels([])
   plt.imshow(im, cmap="Greys_r", norm=norm)
   ax2 = fig.add_subplot(1, 2, 2)
-  ax2.title.set_text('Real PPS')
+  ax2.title.set_text("Original")
   ax2.set_xticklabels([])
   ax2.set_yticklabels([])
   plt.imshow(ref, cmap="Greys_r", norm=norm)
@@ -148,15 +152,22 @@ with torch.no_grad():
 with torch.no_grad():
   inverse_accuracy = 0
   forward_accuracy = 0
+  relative_accuracy = 0
+  total = 0
   for i, (chs, ins) in enumerate(loader):
     chs = chs.to(device)
     ins = ins.to(device)
-    inverse_accuracy += (forward_model(torch.ceil(model(chs) - divide)) - chs).abs().mean()
+    out = forward_model(torch.ceil(model(chs) - divide))
+    inverse_accuracy += (out - chs).abs().mean()
+    relative_accuracy += (out - forward_model(ins)).abs().mean()
     forward_accuracy += (forward_model(ins) - chs).abs().mean()
-  inverse_accuracy = inverse_accuracy / len(loader)
-  forward_accuracy = forward_accuracy / len(loader)
+    total += 1
+  inverse_accuracy = inverse_accuracy / total
+  relative_accuracy = relative_accuracy / total
+  forward_accuracy = forward_accuracy / total
 
-  print("Inverse MAE: " + "{0:.6f}".format(inverse_accuracy))
+  print(args.model + " MAE: " + "{0:.6f}".format(inverse_accuracy))
+  print(args.model + " Relative MAE: " + "{0:.6f}".format(relative_accuracy))
   print("Forward MAE: " + "{0:.6f}".format(forward_accuracy))
 
 inverseT1 = []
@@ -186,29 +197,29 @@ with torch.no_grad():
     if i == figures_to_generate:
       break
 
-scale = 10
-
 for i in range(len(inverseT1)):
   print("Datapoint " + str(i))
   fig1 = plt.figure()
   ax1 = fig1.add_subplot(1, 1, 1)
   ax1.title.set_text("T1")
-  ax1.set_xticklabels([])
-  plt.plot(range(0, scale*len(inverseT1[i]), scale), inverseT1[i].cpu(), 'bo--', label='Inverse Model')
-  plt.plot(range(0, scale*len(forwardT1[i]), scale), forwardT1[i].cpu(), 'go--', label='Forward Model')
-  plt.plot(range(0, scale*len(realT1[i]), scale), realT1[i].cpu(), 'r+--', label='Real Data')
-  plt.legend(loc="upper right")
+  plt.plot(wavelengths, inverseT1[i].cpu()*100, 'bo--', label=args.model)
+  plt.plot(wavelengths, forwardT1[i].cpu()*100, 'go--', label='Forward Model')
+  plt.plot(wavelengths, realT1[i].cpu()*100, 'r+--', label='Original')
+  plt.legend(loc="upper right", fontsize=12)
+  plt.xlabel("Wavelength (10^8)")
+  plt.ylabel("Output characteristic (%)")
   plt.savefig(path + '/figures/Datapoint' + str(i) + "T1")
   plt.show()
   plt.close()
   fig2 = plt.figure()
   ax2 = fig2.add_subplot(1, 1, 1)
   ax2.title.set_text("T2")
-  ax2.set_xticklabels([])
-  plt.plot(range(0, scale*len(inverseT2[i]), scale), inverseT2[i].cpu(), 'bo--', label='Inverse Model')
-  plt.plot(range(0, scale*len(forwardT2[i]), scale), forwardT2[i].cpu(), 'go--', label='Forward Model')
-  plt.plot(range(0, scale*len(realT2[i]), scale), realT2[i].cpu(), 'r+--', label='Real Data')
-  plt.legend(loc="upper right")
+  plt.plot(wavelengths, inverseT2[i].cpu()*100, 'bo--', label=args.model)
+  plt.plot(wavelengths, forwardT2[i].cpu()*100, 'go--', label='Forward Model')
+  plt.plot(wavelengths, realT2[i].cpu()*100, 'r+--', label='Original')
+  plt.legend(loc="upper right", fontsize=12)
+  plt.xlabel("Wavelength (10^8)")
+  plt.ylabel("Output characteristic (%)")
   plt.savefig(path + '/figures/Datapoint' + str(i) + "T2")
   plt.show()
   plt.close()
