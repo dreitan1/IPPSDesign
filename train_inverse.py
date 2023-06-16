@@ -48,11 +48,12 @@ parser = argparse.ArgumentParser(
                     description='Trains an inverse model')
 parser.add_argument('--model', required=True)
 parser.add_argument('--model_name', required=False, default=None)
+parser.add_argument('-path', required=False, default="..")
 
 args = parser.parse_args()
 
 # Setup variables
-path = ".."
+path = args.path
 
 # wavelengths: (100x2)
 # inputs: (1x20x20)

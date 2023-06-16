@@ -65,7 +65,7 @@ divide = 0.5
 full_test = False
 # Reference number pps to show and save
 ref_num = 0
-save = False
+save = True
 
 os.makedirs(path + "/figures", exist_ok=True)
 
@@ -116,6 +116,15 @@ plt.imshow(ref, cmap="Greys_r", norm=norm)
 
 if save:
    plt.savefig(path + '/figures/Image' + str(ref_num), bbox_inches='tight')
+   str_im = ""
+   for y in range(im.shape[0]):
+       for x in range(im.shape[1]):
+          str_im += str(int(im[y][x]))
+          if x != im.shape[1] - 1:
+             str_im += '\t'   
+       str_im += '\n'
+   with open(path + '/figures/adversarialattack_structure.txt', 'w') as file:
+       file.write(str_im)
    print("Saved PPS output", str(ref_num))
 plt.show()
 plt.close()

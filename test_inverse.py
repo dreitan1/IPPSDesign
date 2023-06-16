@@ -2,6 +2,7 @@ import torch
 from torch.utils.data import TensorDataset, DataLoader
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.colors import LinearSegmentedColormap
 from resnet import ResNet
 from inceptionnet import InceptionNet
 from vgg import VGG
@@ -16,7 +17,8 @@ def load_files(path):
     files = [f[9:-4] for f in os.listdir(path + "/input_patterns") if os.path.isfile(os.path.join(path + "/input_patterns", f))]
     char_files = [f[15:-4] for f in os.listdir(path + "/output_characteristics") if os.path.isfile(os.path.join(path + "/output_characteristics", f))]
     files = list(set(files) & set(char_files))
-    print(files)
+    # Can pick a file specifically to focus on to view structure and graphs
+    # files = [4076]
     sizes = len(files)
     w = 20
     h = 20
@@ -38,7 +40,7 @@ def load_files(path):
         if counts == 0:
           wavelengths[:] = Chars1[counts, :, 0]
 
-    return inputs, Chars, [float("{:.2f}".format(x.item())) for x in wavelengths*(10**8)]
+    return inputs, Chars, [float("{:.2f}".format(x.item())) for x in wavelengths*(10**9)]
 
 
 # Set up arg parser
@@ -46,25 +48,32 @@ parser = argparse.ArgumentParser(
                     prog='Inverse Model Trainer',
                     description='Trains an inverse model')
 parser.add_argument('--model', required=True)
+parser.add_argument('--model_name', required=False, default=None)
+parser.add_argument('--path', required=False, default="..")
 args = parser.parse_args()
 
 # Setup test variables
-path = ".."
+path = args.path
 
 # wavelengths: (100x2)
 # inputs: (1x20x20)
 inputs, chars, wavelengths = load_files(path + "/Machine learning inverse design")
 
+model_name = args['model_name']
+
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 if args.model == "ResNet":
   model = ResNet().to(device)
-  model_path = "res_model.pth"
+  if model_name is None:
+    model_path = "res_model.pth"
 elif args.model == "InceptionNet":
   model = InceptionNet().to(device)
-  model_path = "inception_model.pth"
+  if model_name is None:
+    model_path = "inception_model.pth"
 elif args.model == "VGG":
    model = VGG().to(device)
-   model_path = "vgg_model.pth"
+   if model_name is None:
+    model_path = "vgg_model.pth"
 forward_model = FWBinaryImageCNN().to(device)
 
 batch_size = 1
@@ -90,10 +99,10 @@ total = 0
 # pixel value = {0, 1}
 divide = 0.5
 
-full_test = False
+full_test = True
 # Reference number pps to show and save
 ref_num = 0
-save = False
+save = True
 
 os.makedirs(path + "/figures", exist_ok=True)
 
@@ -131,20 +140,32 @@ with torch.no_grad():
 
   norm = plt.Normalize(0, 1)
 
+  colors = [(0, 0, 0), (0.61328125, 0.21875, 0.20703125)] # first color is black, last is red
+  cm = LinearSegmentedColormap.from_list(
+        "Custom", colors, N=20)
   fig = plt.figure()
   ax1 = fig.add_subplot(1, 2, 1)
   ax1.title.set_text(args.model)
   ax1.set_xticklabels([])
   ax1.set_yticklabels([])
-  plt.imshow(im, cmap="Greys_r", norm=norm)
+  plt.imshow(im, cmap=cm, norm=norm)
   ax2 = fig.add_subplot(1, 2, 2)
   ax2.title.set_text("Original")
   ax2.set_xticklabels([])
   ax2.set_yticklabels([])
-  plt.imshow(ref, cmap="Greys_r", norm=norm)
+  plt.imshow(ref, cmap=cm, norm=norm)
 
   if save:
     plt.savefig(path + '/figures/Image' + str(ref_num), bbox_inches='tight')
+    str_im = ""
+    for y in range(im.shape[0]):
+       for x in range(im.shape[1]):
+          str_im += str(int(im[y][x]))
+          if x != im.shape[1] - 1:
+             str_im += '\t'   
+       str_im += '\n'
+    with open(path + '/figures/' + (args.model).lower() + '_structure.txt', 'w') as file:
+       file.write(str_im)
     print("Saved PPS output", str(ref_num))
   plt.show()
   plt.close()
@@ -158,17 +179,17 @@ with torch.no_grad():
     chs = chs.to(device)
     ins = ins.to(device)
     out = forward_model(torch.ceil(model(chs) - divide))
-    inverse_accuracy += (out - chs).abs().mean()
-    relative_accuracy += (out - forward_model(ins)).abs().mean()
-    forward_accuracy += (forward_model(ins) - chs).abs().mean()
+    inverse_accuracy += ((out - chs)**2).abs().mean()
+    relative_accuracy += ((out - forward_model(ins))**2).abs().mean()
+    forward_accuracy += ((forward_model(ins) - chs)**2).abs().mean()
     total += 1
   inverse_accuracy = inverse_accuracy / total
   relative_accuracy = relative_accuracy / total
   forward_accuracy = forward_accuracy / total
 
-  print(args.model + " MAE: " + "{0:.6f}".format(inverse_accuracy))
-  print(args.model + " Relative MAE: " + "{0:.6f}".format(relative_accuracy))
-  print("Forward MAE: " + "{0:.6f}".format(forward_accuracy))
+  print(args.model + " MSE: " + "{0:.6f}".format(inverse_accuracy))
+  print(args.model + " Relative MSE: " + "{0:.6f}".format(relative_accuracy))
+  print("Forward MSE: " + "{0:.6f}".format(forward_accuracy))
 
 inverseT1 = []
 inverseT2 = []
@@ -179,6 +200,9 @@ realT2 = []
 
 # Generate 10 of these
 figures_to_generate = 10
+figures_to_generate = min(figures_to_generate, len(wavelengths))
+
+font_size = 16
 
 with torch.no_grad():
   for i, (chs, ins) in enumerate(loader):
@@ -202,24 +226,28 @@ for i in range(len(inverseT1)):
   fig1 = plt.figure()
   ax1 = fig1.add_subplot(1, 1, 1)
   ax1.title.set_text("T1")
-  plt.plot(wavelengths, inverseT1[i].cpu()*100, 'bo--', label=args.model)
-  plt.plot(wavelengths, forwardT1[i].cpu()*100, 'go--', label='Forward Model')
-  plt.plot(wavelengths, realT1[i].cpu()*100, 'r+--', label='Original')
-  plt.legend(loc="upper right", fontsize=12)
-  plt.xlabel("Wavelength (10^8)")
-  plt.ylabel("Output characteristic (%)")
+  ax1.set_ylim([0, 0.4])
+  ax1.title.set_size(16)
+  plt.plot(wavelengths, inverseT1[i].cpu(), 'bo--', label=args.model)
+  #plt.plot(wavelengths, forwardT1[i].cpu(), 'go--', label='Forward Model')
+  plt.plot(wavelengths, realT1[i].cpu(), 'r+--', label='Original')
+  plt.legend(loc="upper right", fontsize=font_size)
+  plt.xlabel("Wavelength (nm)")
+  plt.ylabel("Characteristics")
   plt.savefig(path + '/figures/Datapoint' + str(i) + "T1")
   plt.show()
   plt.close()
   fig2 = plt.figure()
   ax2 = fig2.add_subplot(1, 1, 1)
   ax2.title.set_text("T2")
-  plt.plot(wavelengths, inverseT2[i].cpu()*100, 'bo--', label=args.model)
-  plt.plot(wavelengths, forwardT2[i].cpu()*100, 'go--', label='Forward Model')
-  plt.plot(wavelengths, realT2[i].cpu()*100, 'r+--', label='Original')
-  plt.legend(loc="upper right", fontsize=12)
-  plt.xlabel("Wavelength (10^8)")
-  plt.ylabel("Output characteristic (%)")
+  ax2.set_ylim([0, 0.4])
+  ax2.title.set_size(16)
+  plt.plot(wavelengths, inverseT2[i].cpu(), 'bo--', label=args.model)
+  #plt.plot(wavelengths, forwardT2[i].cpu(), 'go--', label='Forward Model')
+  plt.plot(wavelengths, realT2[i].cpu(), 'r+--', label='Original')
+  plt.legend(loc="upper right", fontsize=font_size)
+  plt.xlabel("Wavelength (nm)")
+  plt.ylabel("Characteristics")
   plt.savefig(path + '/figures/Datapoint' + str(i) + "T2")
   plt.show()
   plt.close()

@@ -4,6 +4,7 @@ from torch.utils.data import TensorDataset, DataLoader
 import numpy as np
 import os
 from forward import FWBinaryImageCNN
+import argparse
 
 
 def load_files(path):
@@ -31,8 +32,15 @@ def load_files(path):
 
     return inputs, Chars
 
+# Set up arg parser
+parser = argparse.ArgumentParser(
+                    prog='Forward model trainer',
+                    description='Trains a forward model')
+parser.add_argument('--path', required=False, default="..")
+args = parser.parse_args()
+
 # Setup variables
-path = "."
+path = args.path
 
 # wavelengths: (100x2)
 # inputs: (1x20x20)
