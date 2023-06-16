@@ -1,6 +1,6 @@
 # IPPSDesign
 
-Repository for "Inverse Design of Silicon Photonics Components: A Study from Deep Learning Perspective" 
+Repository for "Inverse Design of Silicon Photonics Components: A Study from Deep Learning Perspective"
 
 # Training the Forward Model
 
