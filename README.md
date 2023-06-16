@@ -8,7 +8,7 @@ python3 -m train_forward [--path=(default=..)]
 
 # Training the Inverse Model
 
-python3 -m train_inverse <--model=(ResNet | InceptionNet | VGG)> [--model_name=(default=None)], [--path=(default=..)]
+python3 -m train_inverse <--model=(ResNet | InceptionNet | VGG)> [--model_name=(default=None)] [--path=(default=..)]
 
 If model name is not specified, defaults to name recognized by tester.
 
