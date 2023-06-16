@@ -16,7 +16,7 @@ Input structures and output characteristics expected to be in folder at $path + 
 
 # Testing the Models
 
-python3 -m test_inverse <--model=(ResNEt | InceptionNet | VGG)> [--model_name=(default=None)], [--path=(default=..)]
+python3 -m test_inverse <--model=(ResNEt | InceptionNet | VGG)> [--model_name=(default=None)] [--path=(default=..)]
 
 To run this program, 2 models are required in the models directory: the inverse model to test and the forward model.
 
