@@ -12,6 +12,8 @@ python3 -m train_inverse <--model=(ResNet | InceptionNet | VGG)> [--model_name=(
 
 If model name is not specified, defaults to name recognized by tester.
 
+Input structures and output characteristics expected to be in folder at $path + "/input_patterns" and $path + "/output_characteristics" respectively. 
+
 # Testing the Models
 
 python3 -m test_inverse <--model=(ResNEt | InceptionNet | VGG)> [--model_name=(default=None)], [--path=(default=..)]
