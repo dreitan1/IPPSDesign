@@ -10,6 +10,12 @@ Whole-data evaluation
 
 Our results show that our ResNet and InceptionNet models both perform reasonably well for PPS generation, especially when compared with VGG. Our results when trained on 90% of the data and tested on the remaining 10% are concurrent withthe results found in our whole-data evaluation.
 
+# Requirements
+
+Load requirements with:
+
+python3 -m pip install -r requirements.txt
+
 # Training the Forward Model
 
 python3 -m train_forward [--path=(default=..)]
