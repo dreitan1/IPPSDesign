@@ -18,7 +18,7 @@ python3 -m train_forward [--path=(default=..)]
 
 python3 -m train_inverse --model=(ResNet | InceptionNet | VGG) [--model_name=(default=res_model.pth | inception_model.pth | vgg_model.pth)] [--path=(default=..)]
 
-If model name is not specified, defaults to name recognized by default tester based on model.
+If model name is not specified, defaults to name recognized by default tester, based on model used.
 
 Input structures and output characteristics expected to be in folder at $path + "Machine learning inverse design/input_patterns" and $path + "Machine learning inverse design/output_characteristics" respectively. 
 
@@ -26,7 +26,7 @@ This code trains on the entire dataset. To instead run the training with a 90:10
 
 # Testing the Models
 
-python3 -m test_inverse --model=(ResNEt | InceptionNet | VGG) [--model_name=(default=res_model.pth | inception_model.pth | vgg_model.pth)] [--path=(default=..)]
+python3 -m test_inverse --model=(ResNet | InceptionNet | VGG) [--model_name=(default=res_model.pth | inception_model.pth | vgg_model.pth)] [--path=(default=..)]
 
 To run this program, 2 models are required in the models directory: the inverse model to test and the forward model (forward_model.pth).
 
