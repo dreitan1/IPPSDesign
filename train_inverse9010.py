@@ -71,7 +71,8 @@ dataset = TensorDataset(chars, inputs)
 train_test_split = 0.9
 train_dataset = torch.utils.data.Subset(dataset, range(ceil(train_test_split*len(dataset))))
 test_dataset = torch.utils.data.Subset(dataset, range(ceil(train_test_split*len(dataset)), len(dataset)))
-loader = DataLoader(dataset, batch_size=batch_size, drop_last=True, shuffle=True)
+trainloader = DataLoader(train_dataset, batch_size=batch_size, drop_last=True, shuffle=True)
+testloader = DataLoader(test_dataset, batch_size=1, drop_last=True, shuffle=False)
 
 model_name = args['model_name']
 
@@ -90,10 +91,10 @@ elif args['model'] == "VGG":
 
 model_path = path + "/models/" + model_name
 optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=1e-6)
-total_steps = len(loader)
+total_steps = len(trainloader)
 
 for epoch in range(epochs):
-    for i, (chs, ins) in enumerate(loader):
+    for i, (chs, ins) in enumerate(trainloader):
         chs = chs.to(device)
         ins = ins.to(device)
         optimizer.zero_grad()
