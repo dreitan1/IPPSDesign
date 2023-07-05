@@ -27,7 +27,9 @@ PATH as default is ".."
 python3 -m train_inverse --model=MODEL [--model_name=NAME] [--path=PATH]
 
 MODEL can be ResNet, InceptionNet, or VGG
+
 NAME as default is "res_model.pth", "inception_model.pth", or "vgg_model.pth", depending on MODEL
+
 PATH as default is ".."
 
 If model name is not specified, defaults to name recognized by default tester, based on model used.
@@ -41,7 +43,9 @@ This code trains on the entire dataset. To instead run the training with a 90:10
 python3 -m test_inverse --model=MODEL [--model_name=NAME] [--path=PATH]
 
 MODEL can be ResNet, InceptionNet, or VGG
+
 NAME as default is "res_model.pth", "inception_model.pth", or "vgg_model.pth", depending on MODEL
+
 PATH as default is ".."
 
 To run this program, 2 models are required in the models directory: the inverse model to test and the forward model (forward_model.pth).
