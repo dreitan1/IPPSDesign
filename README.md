@@ -48,7 +48,7 @@ NAME as default is "res_model.pth", "inception_model.pth", or "vgg_model.pth", d
 
 PATH as default is ".."
 
-To run this program, 2 models are required in the models directory: the inverse model to test and the forward model (forward_model.pth).
+To run this program, two models are required in the models directory: the inverse model to test and the forward model (forward_model.pth).
 
 # Misc.
 
